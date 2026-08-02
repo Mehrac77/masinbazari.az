@@ -266,7 +266,10 @@ export default function App() {
 
       {showAdd && <AddListingModal onClose={() => setShowAdd(false)} onSave={addListing} />}
 
-      <footer style={{ background: C.asphalt, color: C.grey, textAlign: "center", padding: "22px 20px", fontSize: 12.5 }}>
+     <footer style={{ background: C.asphalt, color: C.grey, textAlign: "center", padding: "22px 20px", fontSize: 12.5 }}>
+        <div style={{ color: C.yellow, fontFamily: "'Space Mono', monospace", fontSize: 15, marginBottom: 6 }}>
+          Əlaqə: 0775567940
+        </div>
         maşınbazarı.az — 2026
       </footer>
     </div>
