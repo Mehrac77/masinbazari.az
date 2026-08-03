@@ -15,21 +15,19 @@ const C = {
   greyLight: "#D8D6CF",
 };
 
-const BRANDS = ["Mercedes-Benz", "BMW", "Toyota", "Hyundai", "Kia", "Chevrolet", "VAZ (Lada)", "Nissan", "Volkswagen", "Mitsubishi"];
+const BRANDS = [
+  "Mercedes-Benz", "BMW", "Audi", "Toyota", "Lexus", "Hyundai", "Kia",
+  "Chevrolet", "VAZ (Lada)", "Nissan", "Volkswagen", "Mitsubishi", "Ford",
+  "Honda", "Mazda", "Subaru", "Opel", "Peugeot", "Renault", "Skoda",
+  "Volvo", "Land Rover", "Jeep", "Porsche", "Infiniti", "Suzuki", "Fiat",
+  "Citroen", "GMC", "Cadillac", "Chrysler", "Dodge", "Buick", "Lincoln",
+  "Acura", "Genesis", "Great Wall", "Geely", "Chery", "BYD", "MG",
+  "SsangYong", "UAZ", "GAZ (Volga)", "Daewoo", "Mini", "Jaguar", "Bentley",
+  "Diğər",
+];
 const CITIES = ["Bakı", "Gəncə", "Sumqayıt", "Mingəçevir", "Şəki", "Lənkəran"];
 const FUELS = ["Benzin", "Dizel", "Qaz", "Hibrid", "Elektro"];
 const GEARS = ["Avtomat", "Mexanika", "Robot"];
-
-const seedListings = [
-  { id: "l1", brand: "Mercedes-Benz", model: "E 200", year: 2019, price: 48500, mileage: 62000, fuel: "Benzin", gear: "Avtomat", city: "Bakı", img: "https://images.unsplash.com/photo-1617469767053-d3b523a0b982?w=800&q=80", featured: true, desc: "Rəsmi diler xidməti, qəzasız, tam yığma." },
-  { id: "l2", brand: "BMW", model: "320i", year: 2018, price: 39900, mileage: 71000, fuel: "Benzin", gear: "Avtomat", city: "Bakı", img: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&q=80", featured: true, desc: "M-paket, orijinal boya, ikinci sahib." },
-  { id: "l3", brand: "Toyota", model: "Camry", year: 2020, price: 52000, mileage: 34000, fuel: "Hibrid", gear: "Avtomat", city: "Sumqayıt", img: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=800&q=80", featured: false, desc: "Hibrid mühərrik, aşağı yanacaq sərfiyyatı." },
-  { id: "l4", brand: "VAZ (Lada)", model: "Granta", year: 2021, price: 14200, mileage: 21000, fuel: "Benzin", gear: "Mexanika", city: "Gəncə", img: "https://images.unsplash.com/photo-1583267746897-2cf415887172?w=800&q=80", featured: false, desc: "Yeni kimi, qulluqlu, birinci sahib." },
-  { id: "l5", brand: "Hyundai", model: "Elantra", year: 2022, price: 31500, mileage: 12000, fuel: "Benzin", gear: "Avtomat", city: "Bakı", img: "https://images.unsplash.com/photo-1616422285623-13ff0162193c?w=800&q=80", featured: true, desc: "Zəmanət altında, minimal yürüş." },
-  { id: "l6", brand: "Kia", model: "Sportage", year: 2020, price: 43800, mileage: 45000, fuel: "Dizel", gear: "Avtomat", city: "Mingəçevir", img: "https://images.unsplash.com/photo-1568844293986-8d0400bd4745?w=800&q=80", featured: false, desc: "Tam dolğun, panoramik lyuk, dəri salon." },
-  { id: "l7", brand: "Chevrolet", model: "Malibu", year: 2017, price: 22900, mileage: 88000, fuel: "Benzin", gear: "Avtomat", city: "Bakı", img: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&q=80", featured: false, desc: "Rahat sürüş, geniş salon, ailəvi maşın." },
-  { id: "l8", brand: "Volkswagen", model: "Passat", year: 2019, price: 37200, mileage: 55000, fuel: "Dizel", gear: "Robot", city: "Lənkəran", img: "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&q=80", featured: false, desc: "Alman keyfiyyəti, qənaətcil dizel." },
-];
 
 const fmtPrice = (n) => n.toLocaleString("az-AZ") + " ₼";
 const fmtKm = (n) => n.toLocaleString("az-AZ") + " km";
@@ -100,19 +98,18 @@ function AddListingModal({ onClose, onSave }) {
   };
 
   const submit = async () => {
-    if (!f.model || !f.price) return;
+    if (!f.model || !f.price || !file) {
+      setError(!file ? "Zəhmət olmasa şəkil əlavə et." : "Model və qiyməti doldur.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
-      let imgUrl = "https://images.unsplash.com/photo-1502877338535-766e1452684a?w=800&q=80";
-
-      if (file) {
-        const fileName = `${Date.now()}-${file.name}`;
-        const { error: uploadError } = await supabase.storage.from("car-images").upload(fileName, file);
-        if (uploadError) throw uploadError;
-        const { data: publicData } = supabase.storage.from("car-images").getPublicUrl(fileName);
-        imgUrl = publicData.publicUrl;
-      }
+      const fileName = `${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("car-images").upload(fileName, file);
+      if (uploadError) throw uploadError;
+      const { data: publicData } = supabase.storage.from("car-images").getPublicUrl(fileName);
+      const imgUrl = publicData.publicUrl;
 
       const newListing = {
         id: "u" + Date.now(),
@@ -154,7 +151,7 @@ function AddListingModal({ onClose, onSave }) {
         ) : (
           <div style={{ padding: 22, display: "grid", gap: 14 }}>
             <div>
-              <label style={label}>Şəkil</label>
+              <label style={label}>Şəkil *</label>
               <label htmlFor="carImageInput" style={{
                 marginTop: 5, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 gap: 6, border: `2px dashed ${C.greyLight}`, borderRadius: 8, padding: preview ? 0 : "22px 10px",
@@ -246,7 +243,8 @@ function DetailView({ l, onBack }) {
 }
 
 export default function App() {
-  const [listings, setListings] = useState(seedListings);
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState({ page: "home" });
   const [showAdd, setShowAdd] = useState(false);
   const [brandFilter, setBrandFilter] = useState("Hamısı");
@@ -257,9 +255,8 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.from("listings").select("*").order("created_at", { ascending: false });
-      if (!error && data) {
-        setListings([...data, ...seedListings]);
-      }
+      if (!error && data) setListings(data);
+      setLoading(false);
     })();
   }, []);
 
@@ -319,8 +316,12 @@ export default function App() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "18px 0 14px" }}>
               <span style={{ fontWeight: 700, color: C.asphalt, fontSize: 14.5 }}>{filtered.length} elan tapıldı</span>
             </div>
-            {filtered.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 20px", color: C.grey }}>Bu meyarlara uyğun elan yoxdur. Filtrləri dəyişməyi sınayın.</div>
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: C.grey }}>Yüklənir...</div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: C.grey }}>
+                Hələ heç bir elan yoxdur. İlk elanı sən yerləşdir!
+              </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 16 }}>
                 {filtered.map((l) => <ListingCard key={l.id} l={l} onOpen={(li) => setView({ page: "detail", listing: li })} fav={!!favs[l.id]} toggleFav={toggleFav} />)}
@@ -335,7 +336,6 @@ export default function App() {
       <footer style={{ background: C.asphalt, color: C.grey, textAlign: "center", padding: "22px 20px", fontSize: 12.5 }}>
         <div style={{ color: C.yellow, fontFamily: "'Space Mono', monospace", fontSize: 15, marginBottom: 6 }}>
           Əlaqə: 0775567940
-            Admin: Mehrac Rzazadə
         </div>
         maşınbazarı.az — 2026
       </footer>
