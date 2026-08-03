@@ -43,13 +43,17 @@ const Plate = ({ children, tone = "yellow", small }) => (
 );
 
 function ListingCard({ l, onOpen, fav, toggleFav }) {
+  const thumb = l.img || (l.images && l.images[0]);
   return (
     <div onClick={() => onOpen(l)} style={{
       background: "#fff", border: `1px solid ${C.greyLight}`, borderRadius: 10, overflow: "hidden",
       cursor: "pointer", position: "relative",
     }}>
       <div style={{ position: "relative", height: 168, background: C.asphalt2 }}>
-        <img src={l.img} alt={`${l.brand} ${l.model}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <img src={thumb} alt={`${l.brand} ${l.model}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {l.images && l.images.length > 1 && (
+          <div style={{ position: "absolute", bottom: 10, left: 10 }}><Plate tone="dark" small>+{l.images.length - 1} şəkil</Plate></div>
+        )}
         {l.featured && <div style={{ position: "absolute", top: 10, left: 10 }}><Plate tone="dark" small>SEÇİLMİŞ</Plate></div>}
         <button onClick={(e) => { e.stopPropagation(); toggleFav(l.id); }} style={{
           position: "absolute", top: 8, right: 8, width: 32, height: 32, borderRadius: "50%",
@@ -83,39 +87,48 @@ const Chip = ({ active, onClick, children }) => (
 
 function AddListingModal({ onClose, onSave }) {
   const [f, setF] = useState({ brand: BRANDS[0], model: "", year: 2020, price: "", mileage: "", fuel: FUELS[0], gear: GEARS[0], city: CITIES[0], desc: "", phone: "" });
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
-  const handleFile = (e) => {
-    const chosen = e.target.files?.[0];
-    if (!chosen) return;
-    setFile(chosen);
-    setPreview(URL.createObjectURL(chosen));
+  const handleFiles = (e) => {
+    const chosen = Array.from(e.target.files || []);
+    if (!chosen.length) return;
+    setFiles((prev) => [...prev, ...chosen]);
+    setPreviews((prev) => [...prev, ...chosen.map((c) => URL.createObjectURL(c))]);
+    e.target.value = "";
+  };
+
+  const removeImage = (idx) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+    setPreviews((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const submit = async () => {
-    if (!f.model || !f.price || !file) {
-      setError(!file ? "Zəhmət olmasa şəkil əlavə et." : "Model və qiyməti doldur.");
+    if (!f.model || !f.price || files.length === 0) {
+      setError(files.length === 0 ? "Ən azı 1 şəkil əlavə et." : "Model və qiyməti doldur.");
       return;
     }
     setSaving(true);
     setError("");
     try {
-      const fileName = `${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage.from("car-images").upload(fileName, file);
-      if (uploadError) throw uploadError;
-      const { data: publicData } = supabase.storage.from("car-images").getPublicUrl(fileName);
-      const imgUrl = publicData.publicUrl;
+      const urls = [];
+      for (const file of files) {
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        const { error: uploadError } = await supabase.storage.from("car-images").upload(fileName, file);
+        if (uploadError) throw uploadError;
+        const { data: publicData } = supabase.storage.from("car-images").getPublicUrl(fileName);
+        urls.push(publicData.publicUrl);
+      }
 
       const newListing = {
         id: "u" + Date.now(),
         brand: f.brand, model: f.model, year: Number(f.year), price: Number(f.price),
         mileage: Number(f.mileage) || 0, fuel: f.fuel, gear: f.gear, city: f.city,
-        img: imgUrl, desc: f.desc || "Təsvir əlavə edilməyib.", phone: f.phone,
+        img: urls[0], images: urls, desc: f.desc || "Təsvir əlavə edilməyib.", phone: f.phone,
       };
 
       const { error: insertError } = await supabase.from("listings").insert(newListing);
@@ -151,22 +164,34 @@ function AddListingModal({ onClose, onSave }) {
         ) : (
           <div style={{ padding: 22, display: "grid", gap: 14 }}>
             <div>
-              <label style={label}>Şəkil *</label>
+              <label style={label}>Şəkillər * (istədiyin qədər)</label>
+
+              {previews.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(72px,1fr))", gap: 8, marginTop: 8 }}>
+                  {previews.map((p, i) => (
+                    <div key={i} style={{ position: "relative", borderRadius: 6, overflow: "hidden", height: 72 }}>
+                      <img src={p} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.6)", color: "#fff", display: "grid", placeItems: "center", cursor: "pointer", padding: 0 }}
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <label htmlFor="carImageInput" style={{
-                marginTop: 5, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                gap: 6, border: `2px dashed ${C.greyLight}`, borderRadius: 8, padding: preview ? 0 : "22px 10px",
-                cursor: "pointer", overflow: "hidden", background: C.cream,
+                marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center",
+                gap: 6, border: `2px dashed ${C.greyLight}`, borderRadius: 8, padding: "16px 10px",
+                cursor: "pointer", background: C.cream,
               }}>
-                {preview ? (
-                  <img src={preview} alt="Önizləmə" style={{ width: "100%", height: 160, objectFit: "cover" }} />
-                ) : (
-                  <>
-                    <ImagePlus size={22} color={C.grey} />
-                    <span style={{ fontSize: 13, color: C.grey, fontWeight: 600 }}>Şəkil seçmək üçün klik et</span>
-                  </>
-                )}
+                <ImagePlus size={20} color={C.grey} />
+                <span style={{ fontSize: 13, color: C.grey, fontWeight: 600 }}>Şəkil əlavə et</span>
               </label>
-              <input id="carImageInput" type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+              <input id="carImageInput" type="file" accept="image/*" multiple onChange={handleFiles} style={{ display: "none" }} />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -201,14 +226,32 @@ function AddListingModal({ onClose, onSave }) {
 }
 
 function DetailView({ l, onBack }) {
+  const gallery = (l.images && l.images.length > 0) ? l.images : [l.img];
+  const [active, setActive] = useState(0);
+
   return (
     <div style={{ maxWidth: 880, margin: "0 auto", padding: "22px 18px 60px" }}>
       <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, border: "none", background: "none", cursor: "pointer", color: C.steel, fontWeight: 700, fontSize: 14, marginBottom: 16, padding: 0 }}>
         <ArrowLeft size={16} /> Bazara qayıt
       </button>
+
       <div style={{ borderRadius: 12, overflow: "hidden", height: 340, background: C.asphalt2 }}>
-        <img src={l.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        <img src={gallery[active]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </div>
+      {gallery.length > 1 && (
+        <div style={{ display: "flex", gap: 8, marginTop: 8, overflowX: "auto" }}>
+          {gallery.map((img, i) => (
+            <div
+              key={i}
+              onClick={() => setActive(i)}
+              style={{ width: 64, height: 64, borderRadius: 6, overflow: "hidden", flexShrink: 0, cursor: "pointer", border: active === i ? `2px solid ${C.steel}` : `2px solid transparent`, opacity: active === i ? 1 : 0.7 }}
+            >
+              <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 20, flexWrap: "wrap", gap: 14 }}>
         <div>
           <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: 30, color: C.asphalt }}>{l.brand} {l.model}</div>
