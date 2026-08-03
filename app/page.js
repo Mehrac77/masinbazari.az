@@ -335,7 +335,7 @@ export default function App() {
       <footer style={{ background: C.asphalt, color: C.grey, textAlign: "center", padding: "22px 20px", fontSize: 12.5 }}>
         <div style={{ color: C.yellow, fontFamily: "'Space Mono', monospace", fontSize: 15, marginBottom: 6 }}>
           Əlaqə: 0775567940
-            Admin:Mehrac Rzazadə
+            Admin: Mehrac Rzazadə
         </div>
         maşınbazarı.az — 2026
       </footer>
